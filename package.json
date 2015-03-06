@@ -1,17 +1,14 @@
 {
   "name": "recordOpus",
   "version": "0.0.1",
-  "private": true,
+  "description": "audio recorder using opus packets",
   "scripts": {
-    "start": "node ./bin/www"
+    "start": "node server/app.js"
   },
   "dependencies": {
-    "express": "~4.2.0",
-    "static-favicon": "~1.0.0",
-    "morgan": "~1.0.0",
-    "cookie-parser": "~1.0.1",
-    "body-parser": "~1.0.0",
-    "debug": "~0.7.4",
-    "jade": "~1.3.0"
+    "express": "4.10.2",
+    "fluent-ffmpeg": "^2.0.0-rc3",
+    "mkdirp": "^0.5.0",
+    "socket.io": "1.2.0"
   }
 }
