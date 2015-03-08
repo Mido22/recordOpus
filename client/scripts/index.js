@@ -28,7 +28,9 @@ document.addEventListener("DOMContentLoaded", function() {
 
 
   function startRecording() {
-    recorder = new Recorder(audioStream, {}, socket);
+    var t = document.getElementById('type');
+	var type = t.options[t.selectedIndex].value;
+    recorder = new Recorder(audioStream, {type: type}, socket);
     recorder.start();
     start.setAttribute('disabled',true);
     stop.removeAttribute('disabled');
@@ -46,12 +48,14 @@ document.addEventListener("DOMContentLoaded", function() {
 	  var url = data.url
 	    , li = document.createElement('li')
 	    , au = document.createElement('audio')
-	    , hf = document.createElement('a');
+	    , hf = document.createElement('a')
+		, tmp =url.split('/')
+	;
 	  
 	  au.controls = true;
 	  au.src = url;
 	  hf.href = url;
-	  hf.download = new Date().toISOString() + '.wav';
+	  hf.download = tmp[tmp.length-1];
 	  hf.innerHTML = hf.download;
 	  li.appendChild(au);
 	  li.appendChild(hf);

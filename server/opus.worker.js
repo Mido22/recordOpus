@@ -6,7 +6,7 @@ var decoder
   , path = require('path')
   , opus = require('./opus')
   , TMP_PATH = './uploads'
-  , ffmpeg = require('fluent-ffmpeg');
+  , ffmpeg = require('fluent-ffmpeg')
 ;
 
 process.on('message', function(m) {
@@ -19,15 +19,18 @@ process.on('message', function(m) {
 			break;
 	}
 });
+
 function init(config){
 	config = config || {};
 	sampleRate = config.samplingRate || 16000;
 	var channels = config.channels || 1;
 	decoder = new (new opus()).decoder(sampleRate, channels);
 }
+
 function decodePacket(packet){
 	return decoder.decode(packet);
 }
+
 function decode(data){
 	// splitting ArrayBuffer into packets and decoding back to PCM
 	var  decodedPacket, pcmData;
@@ -42,13 +45,19 @@ function decode(data){
 	});
 	delete data.packets;
 	data.pcmData = pcmData;
-	
+	saveFile(data);
+}
+
+
+function saveFile(data){	
+	var path = (data.autoUpload) ? TMP_PATH+'/'+data.uid : TMP_PATH;
+	data.path = path;
 	//checking if temp dir exists, creating it if not.
-	fs.exists(TMP_PATH, function(exists){
+	fs.exists(path, function(exists){
 		if(exists){
 			saveAudio(data);
 		}else{
-			mkdirp(TMP_PATH,'0755', function(err){
+			mkdirp(path,'0755', function(err){
 				if(err)
 					console.log( 'error creating folder');
 				else	
@@ -56,20 +65,33 @@ function decode(data){
 			});
 		}
 	});	
-}
+} 
 
 //saving the .wav file in a temporary location
 function saveAudio(data){
-	var name  = 'wav'+Math.floor(Math.random()*100)+'.wav';
-	var filepath=path.join(TMP_PATH,name);
+	var name1  = data.uid+'.wav';
+	var filepath=path.join(data.path, name1);
 	var wavBlob = encodeWav(data.pcmData);
 	var wstream = fs.createWriteStream(filepath);            
 	wstream.write(toBuffer(wavBlob));
 	wstream.end();
 	delete data.pcmData;
-	data.name = name;
-	data.path = filepath;
-	process.send(data); // returning it, making it appear like file.
+	var callback = function(p){
+		data.path = p;
+		process.send(data);
+	};
+	
+	data.type = data.type || 'wav';
+	switch(data.type){
+		case 'wav': callback(filepath);
+		                 break;
+		case 'ogg':  var outPath = path.join(data.path, data.uid+'.ogg');
+		                 convert(filepath, outPath, callback);
+						 break;
+		case 'mp3':  var outPath = path.join(data.path, data.uid+'.mp3');
+		                 convert(filepath, outPath, callback);
+						 break;
+	}
 };
 	
 function encodeWav(data){
@@ -123,8 +145,38 @@ function array2Ab(arry){
     return ib.buffer;    
 }
 
+function convert(inFile, outFile, callback){	  
+	try{                
+		ffmpeg().input(inFile)
+			.output(outFile)
+			.on('error', function(err) {
+				console.log('err:', err);
+				callback(err);
+			}).on('end', function() {
+				callback(outFile);
+			}).run();                
+	}catch(e){
+		console.log('err:', e);
+		callback(e);
+	}      
+}
 
-
+function concat(inFile, outFile, callback){	  
+	try{                
+		ffmpeg().input(inFile)
+			.inputOptions('-f', 'concat')
+			.output(outFile)
+			.on('error', function(err) {
+				console.log('err:', err);
+				callback(err);
+			}).on('end', function() {
+				callback(outFile);
+			}).run();                
+	}catch(e){
+		console.log('err:', e);
+		callback(e);
+	}      
+}
 
 
 

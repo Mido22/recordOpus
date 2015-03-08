@@ -12,6 +12,7 @@
             , bufferLen = config.bufferLength || 16384
             , intervalTime = config.intervalTime || 5000
             , autoUpload = !!config.autoUpload
+            , type = config.type || 'wav'
             , callback = config.callback || defaultCB
             , recording = false
             , worker = new Worker(config.workerPath || WORKER_PATH)
@@ -40,7 +41,8 @@
                 socket.emit('recording', {
                     packets: e.data.packets,
                     uid: self.uid,
-                    stop: e.data.stop
+                    stop: e.data.stop,
+					type: type
                 });
                 if(e.data.stop){
 					defaultCB();
