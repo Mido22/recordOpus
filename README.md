@@ -21,7 +21,7 @@ I am using [kazuki](https://github.com/kazuki)'s [opus library](https://github.c
  
 ### Note 
   
-  The app is not yet complete, there are some bugs, currently, ffmpeg is yet be added. For now, data is converted and and uploaded to server at one go, planning to change it, give user an option to upload at particular time intervals( say every 15 seconds) and then finally merge all the `wav` files( using `ffmpeg`) and give him a single url to download from, probably give him an option to convert it to `.ogg` or `.mp3` server side.
+  Still in the process of adding auto-upload option, but the audio format options for downloading are `.wav`, `.mp3` and `.ogg`
  
 License
 -------
