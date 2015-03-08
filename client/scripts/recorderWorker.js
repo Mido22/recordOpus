@@ -57,7 +57,6 @@ function getPackets(last){
 	}
     
     var packets = opusEncoder.encode(wavdata);
-    console.log('packets:', packets.length);
 	this.postMessage({
         type:'packets',
         packets:packets,

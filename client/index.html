@@ -23,6 +23,18 @@ body {
     <button id='start' >start</button>
     <button id='stop' >stop</button>
   </div>
+  <div id='options'>
+	  <div > 
+	  output type: 
+		<select name="type">
+		  <option value="wav" selected>wav</option> 
+		  <option value="ogg" >ogg</option>
+		  <option value="mp3">mp3</option>
+		</select>
+	  </div>
+	  <div> auto-upload : <input type='checkbox' /></div>
+	  <div> upload every( in seconds): <input type='number' /></div>
+  </div>
   <div id='downloads'>
   </div>
   <ul id="recordingslist"></ul>

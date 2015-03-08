@@ -7,6 +7,7 @@
 
     function Recorder(stream, cfg, socket){
         var config = cfg || {}
+			, self = this
             , newSampRate = cfg.samplingRate || 16000
             , bufferLen = config.bufferLength || 16384
             , intervalTime = config.intervalTime || 5000
@@ -20,7 +21,8 @@
         
         this.context = source.context;
         this.node = (this.context.createScriptProcessor || this.context.createJavaScriptNode).call(this.context,bufferLen, 2, 2);
-        var uid = genRandom();
+        this.uid = genRandom();
+		
         worker.postMessage({
             command: 'init',
             config: {
@@ -37,7 +39,7 @@
             if(e.data.type === 'packets'){
                 socket.emit('recording', {
                     packets: e.data.packets,
-                    uid: uid,
+                    uid: self.uid,
                     stop: e.data.stop
                 });
                 if(e.data.stop){
@@ -66,17 +68,21 @@
             recording = false;
         }
 
+		 function onFileReady(data){
+			if(self.uid!== data.uid)	return;
+			var url = location.protocol + '//' + location.host + '/'+data.path;
+			data.url = url;
+			callback(data);			
+		}
+		
         function getPackets(last){
             worker.postMessage({command: 'getPackets', last:last, autoUpload:autoUpload});
         }
 
-        source.connect(this.node);
+        source.connect(this.node);		
+		socket.on('link', onFileReady);
 		
-		socket.on('link', function(e){
-			console.log('datum', e.data);
-			var url = location.protocol + '//' + location.host + '/'+e.data.path;
-			callback(url);
-		});
+		
     };
 
     function genRandom(){

@@ -18,7 +18,6 @@ document.addEventListener("DOMContentLoaded", function() {
   navigator.getUserMedia({audio: true}, function(stream) {
         audioStream = stream;
       start.removeAttribute('disabled');
-      //startRecording();
   }, function(e){ console.log('error occoured= '+e)});
 
   start.setAttribute('disabled',true);
@@ -29,7 +28,6 @@ document.addEventListener("DOMContentLoaded", function() {
 
 
   function startRecording() {
-    console.log('starting...');
     recorder = new Recorder(audioStream, {}, socket);
     recorder.start();
     start.setAttribute('disabled',true);
@@ -37,18 +35,18 @@ document.addEventListener("DOMContentLoaded", function() {
   }
 
   function stopRecording() {
-    console.log('stopping...');
-    recorder.stop(createDownloadLink);
+    recorder.stop(onFileReady);
     start.removeAttribute('disabled');
     stop.setAttribute('disabled',true);    
   }
 
 
 
-  function createDownloadLink(url) {
-	  var li = document.createElement('li');
-	  var au = document.createElement('audio');
-	  var hf = document.createElement('a');
+  function onFileReady(data) {
+	  var url = data.url
+	    , li = document.createElement('li')
+	    , au = document.createElement('audio')
+	    , hf = document.createElement('a');
 	  
 	  au.controls = true;
 	  au.src = url;

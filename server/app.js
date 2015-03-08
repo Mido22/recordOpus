@@ -10,15 +10,11 @@ var http = require('http').Server(app);
 var io = require('socket.io')(http);
 
 io.on('connection', function(socket){
-  socket.on('chat message', function(msg){
-    io.emit('chat message', msg);
-  });
   
   socket.on('recording', function(data){
-    console.log('packets:', data.packets.length, 'uid:', data.uid, 'stop:', data.stop);
 		opusWorker.send({
 			command:'decode',
-			packets:data.packets		
+			data : data		
 		});
   });
   
@@ -38,6 +34,6 @@ opusWorker.send({
 }); 
 
 opusWorker.on('message', function(m) {
-  io.emit('link', m);
+	io.emit('link', m);
 });
  /* */
