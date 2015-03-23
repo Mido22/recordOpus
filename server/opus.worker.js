@@ -1,10 +1,10 @@
 
-var decoder 
-  , sampleRate 
+var decoder = []
   , fs = require('fs')
   , mkdirp = require('mkdirp')
   , path = require('path')
   , opus = require('./opus')
+  , rm = require('rimraf')
   , TMP_PATH = './uploads'
   , ffmpeg = require('fluent-ffmpeg')
 ;
@@ -20,23 +20,24 @@ process.on('message', function(m) {
 	}
 });
 
-function init(config){
-	config = config || {};
-	sampleRate = config.samplingRate || 16000;
-	var channels = config.channels || 1;
-	decoder = new (new opus()).decoder(sampleRate, channels);
+function init(sampleRate, channels){
+	channels = channels || 1;
+	decoder[sampleRate] = new (new opus()).decoder(sampleRate, channels);
 }
 
-function decodePacket(packet){
-	return decoder.decode(packet);
+function decodePacket(packet, sampleRate){
+	return decoder[sampleRate].decode(packet);
 }
 
 function decode(data){
 	// splitting ArrayBuffer into packets and decoding back to PCM
-	var  decodedPacket, pcmData;
+	var  decodedPacket, pcmData, sampleRate = data.sampleRate;
+    if(!decoder[sampleRate]){
+        init(data.sampleRate, 1);
+    }
 	data.packets.forEach(function(packet){
         packet = array2Ab(packet);
-		decodedPacket = decodePacket(packet);
+		decodedPacket = decodePacket(packet, sampleRate);
 		if(!pcmData){	
 			pcmData=decodedPacket;
 		}else{
@@ -44,43 +45,68 @@ function decode(data){
         }
 	});
 	delete data.packets;
-	data.pcmData = pcmData;
-	saveFile(data);
+	saveFile(data, pcmData);
 }
 
 
-function saveFile(data){	
+function saveFile(data, pcmData){	
 	var path = (data.autoUpload) ? TMP_PATH+'/'+data.uid : TMP_PATH;
 	data.path = path;
 	//checking if temp dir exists, creating it if not.
 	fs.exists(path, function(exists){
 		if(exists){
-			saveAudio(data);
+			saveAudio(data, pcmData);
 		}else{
 			mkdirp(path,'0755', function(err){
 				if(err)
 					console.log( 'error creating folder');
 				else	
-					saveAudio(data);
+					saveAudio(data, pcmData);
 			});
 		}
 	});	
 } 
 
 //saving the .wav file in a temporary location
-function saveAudio(data){
-	var name1  = data.uid+'.wav';
-	var filepath=path.join(data.path, name1);
-	var wavBlob = encodeWav(data.pcmData);
-	var wstream = fs.createWriteStream(filepath);            
+function saveAudio(data, pcmData){
+    var fileName;
+	if(!data.autoUpload){
+        fileName  = data.uid + '.wav';
+    }else{
+        fileName  = 'audio_' + Math.random() + '.wav';
+        var p = path.resolve(data.path);
+        fs.appendFileSync(path.join(p,'files.txt'), "file '"+path.join(p,fileName)+"'\n");
+    }
+    
+	var filepath = path.join(data.path, fileName),
+        wavBlob = encodeWav(pcmData, data.sampleRate),
+        wstream = fs.createWriteStream(filepath);        
+    
 	wstream.write(toBuffer(wavBlob));
-	wstream.end();
-	delete data.pcmData;
-	var callback = function(p){
-		data.path = p;
-		process.send(data);
-	};
-	
+	wstream.end();	
+    
+    if(data.autoUpload && data.stop){
+        var outFile  = path.join(TMP_PATH, data.uid + '.wav'),
+            inFile = path.join(path.resolve(data.path),'files.txt');
+        concat(inFile, outFile, function(filepath){
+            
+			rm(data.path, function(err){
+				if(err){
+					console.log('error while removing dir',err);
+                }
+			});
+            returnLink(data, filepath);
+        });
+    }else if(!data.autoUpload){
+        returnLink(data, filepath);
+    }
+};
+
+function returnLink(data, filepath){
+    var callback = function(p){
+            data.path = p;
+            process.send(data);
+    };
 	data.type = data.type || 'wav';
 	switch(data.type){
 		case 'wav': callback(filepath);
@@ -92,9 +118,9 @@ function saveAudio(data){
 		                 convert(filepath, outPath, callback);
 						 break;
 	}
-};
+}
 	
-function encodeWav(data){
+function encodeWav(data, sampleRate){
 	var arrayBuffer = new ArrayBuffer(44 + data.byteLength);
 	var view = new DataView(arrayBuffer);
 	var offset=44;

@@ -1,14 +1,32 @@
 {
   "name": "recordOpus",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "audio recorder using opus packets",
   "scripts": {
-    "start": "node server/app.js"
+    "start": "node server/app.js",
+    "test": "echo \"One day I would write them, but not today.\" && exit 1"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Mido22/recordOpus.git"
+  },
+  "keywords": [
+    "opus",
+    "audio-recorder",
+    "nodejs",
+    "javascript"
+  ],
+  "author": "Ban Mido",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Mido22/recordOpus/issues"
+  },
+  "homepage": "https://github.com/Mido22/recordOpus",
   "dependencies": {
     "express": "4.10.2",
     "fluent-ffmpeg": "^2.0.0-rc3",
     "mkdirp": "^0.5.0",
+    "rimraf": "^2.3.2",
     "socket.io": "1.2.0"
   }
 }

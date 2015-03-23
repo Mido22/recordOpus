@@ -30,7 +30,11 @@ document.addEventListener("DOMContentLoaded", function() {
   function startRecording() {
     var t = document.getElementById('type');
 	var type = t.options[t.selectedIndex].value;
-    recorder = new Recorder(audioStream, {type: type}, socket);
+    recorder = new Recorder(audioStream, {
+        type: type,
+        autoUpload: document.getElementById('autoUpload').checked,
+        intervalTime: Math.round(document.getElementById('intervalTime').value * 1000)
+        }, socket);
     recorder.start();
     start.setAttribute('disabled',true);
     stop.removeAttribute('disabled');

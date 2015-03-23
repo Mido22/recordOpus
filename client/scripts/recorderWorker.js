@@ -60,7 +60,8 @@ function getPackets(last){
 	this.postMessage({
         type:'packets',
         packets:packets,
-        stop: last
+        stop: last,
+        sampleRate: newSampRate
     }); 
     clear();
 }

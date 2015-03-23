@@ -6,17 +6,18 @@
 
 
     function Recorder(stream, cfg, socket){
+        console.log('cfg:', cfg);
         var config = cfg || {}
 			, self = this
-            , newSampRate = cfg.samplingRate || 16000
-            , bufferLen = config.bufferLength || 16384
-            , intervalTime = config.intervalTime || 5000
+            , bufferLen = 16384
+            , intervalTime = config.intervalTime || 60000
             , autoUpload = !!config.autoUpload
             , type = config.type || 'wav'
             , callback = config.callback || defaultCB
             , recording = false
             , worker = new Worker(config.workerPath || WORKER_PATH)
-            , source =audio_context.createMediaStreamSource(stream)
+            , source = audio_context.createMediaStreamSource(stream)
+            , sampleRate = source.context.sampleRate
             , vInterval
         ;
         
@@ -27,8 +28,7 @@
         worker.postMessage({
             command: 'init',
             config: {
-                sampleRate: this.context.sampleRate,
-                newSampRate: newSampRate,
+                sampleRate: sampleRate
             }
         });
 
@@ -38,11 +38,13 @@
 
         worker.onmessage = function(e){	
             if(e.data.type === 'packets'){
-                socket.emit('recording', {
+                socket.emit('decode', {
                     packets: e.data.packets,
                     uid: self.uid,
                     stop: e.data.stop,
-					type: type
+					type: type,
+					sampleRate: e.data.sampleRate,
+                    autoUpload: autoUpload
                 });
                 if(e.data.stop){
 					defaultCB();
@@ -72,6 +74,7 @@
 
 		 function onFileReady(data){
 			if(self.uid!== data.uid)	return;
+            data.path = data.path.replace('\\', '/');
 			var url = location.protocol + '//' + location.host + '/'+data.path;
 			data.url = url;
 			callback(data);			
