@@ -14,14 +14,17 @@ I am using [kazuki](https://github.com/kazuki)'s [opus library](https://github.c
  * npm install 
  * `ffmpeg` must be pre-installed and must be part of path
  
+to start the application, just type `npm start` in the project root folder.
+
  
 ### Sources:
   * [Opus](https://github.com/kazuki/opus.js-sample)
   * [Wav Recorder](https://github.com/mattdiamond/Recorderjs)
  
-### Note 
+### Features 
   
-  Still in the process of adding auto-upload option, but the audio format options for downloading are `.wav`, `.mp3` and `.ogg`
+  * Can either upload recording in one shot, 
+  * able to save in various formats( wav, mp3 and ogg) (Note: ffmpeg must be installed in system for this.)
  
 License
 -------

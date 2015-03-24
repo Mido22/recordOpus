@@ -1,29 +1,37 @@
 (function(window){
 
     window.AudioContext = window.AudioContext || window.webkitAudioContext;
-    var audio_context = new AudioContext(),
-        WORKER_PATH = '/scripts/recorderWorker.js';
-
+    window.audioContext = new AudioContext();
+    var WORKER_PATH = '/scripts/recorderWorker.js';
 
     function Recorder(stream, cfg, socket){
-        console.log('cfg:', cfg);
+    
+        this.uid = genRandom();
         var config = cfg || {}
 			, self = this
             , bufferLen = 16384
             , intervalTime = config.intervalTime || 60000
             , autoUpload = !!config.autoUpload
             , type = config.type || 'wav'
-            , callback = config.callback || defaultCB
+            , callback = config.callback
             , recording = false
             , worker = new Worker(config.workerPath || WORKER_PATH)
-            , source = audio_context.createMediaStreamSource(stream)
+            , source = window.audioContext.createMediaStreamSource(stream)
             , sampleRate = source.context.sampleRate
             , vInterval
+            , ctx = source.context
+            , node = ctx.createScriptProcessor(bufferLen, 2, 2)
         ;
         
-        this.context = source.context;
-        this.node = (this.context.createScriptProcessor || this.context.createJavaScriptNode).call(this.context,bufferLen, 2, 2);
-        this.uid = genRandom();
+        node.onaudioprocess = function(e){
+            if (!recording) return;
+            worker.postMessage({
+                command: 'record',
+                buffer: e.inputBuffer.getChannelData(0)
+            });
+        }
+        source.connect(node);        
+        node.connect(ctx.destination);
 		
         worker.postMessage({
             command: 'init',
@@ -31,11 +39,7 @@
                 sampleRate: sampleRate
             }
         });
-
-        function defaultCB(){
-            worker.terminate();   
-        }
-
+        
         worker.onmessage = function(e){	
             if(e.data.type === 'packets'){
                 socket.emit('decode', {
@@ -47,30 +51,23 @@
                     autoUpload: autoUpload
                 });
                 if(e.data.stop){
-					defaultCB();
+                    worker.terminate(); 
                 }
             }
         }
 
-        this.node.onaudioprocess = function(e){
-            if (!recording) return;
-            worker.postMessage({
-                command: 'record',
-                buffer: e.inputBuffer.getChannelData(0)
-            });
-        }
 
         this.start = function(){
             recording = true;      
             if(autoUpload)	vInterval = setInterval(getPackets, intervalTime);
-        }
+        };
 
         this.stop = function(cb){
             callback = cb || callback;
             if(vInterval)	clearInterval(vInterval);
             getPackets(true);
             recording = false;
-        }
+        };
 
 		 function onFileReady(data){
 			if(self.uid!== data.uid)	return;
@@ -83,11 +80,8 @@
         function getPackets(last){
             worker.postMessage({command: 'getPackets', last:last, autoUpload:autoUpload});
         }
-
-        source.connect(this.node);		
-		socket.on('link', onFileReady);
-		
-		
+	
+		socket.on('link', onFileReady);	
     };
 
     function genRandom(){
@@ -95,5 +89,4 @@
     }
 
     window.Recorder = Recorder;
-
 })(window);

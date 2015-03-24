@@ -6,7 +6,6 @@ var recorder
   , stop
   , recordingslist
   , socket
-  , audioStream 
 ;
     
 document.addEventListener("DOMContentLoaded", function() {
@@ -16,7 +15,7 @@ document.addEventListener("DOMContentLoaded", function() {
   recordingslist = document.getElementById('recordingslist');
   audio_context = new AudioContext;
   navigator.getUserMedia({audio: true}, function(stream) {
-        audioStream = stream;
+        window.stream = stream;
       start.removeAttribute('disabled');
   }, function(e){ console.log('error occoured= '+e)});
 
@@ -30,7 +29,7 @@ document.addEventListener("DOMContentLoaded", function() {
   function startRecording() {
     var t = document.getElementById('type');
 	var type = t.options[t.selectedIndex].value;
-    recorder = new Recorder(audioStream, {
+    recorder = new Recorder(window.stream, {
         type: type,
         autoUpload: document.getElementById('autoUpload').checked,
         intervalTime: Math.round(document.getElementById('intervalTime').value * 1000)
