@@ -23,7 +23,7 @@ to start the application, just type `npm start` in the project root folder.
  
 ### Features 
   
-  * Can either upload recording in one shot, 
+  * Can either upload recording in one shot, or upload in chunks at desired time intervals.
   * able to save in various formats( wav, mp3 and ogg) (Note: ffmpeg must be installed in system for this.)
  
 License
