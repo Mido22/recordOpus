@@ -6,8 +6,22 @@ var recorder
   , stop
   , recordingslist
   , socket
+  , autoUpload = document.getElementById('autoUpload')
+  , intervalTime = document.getElementById('intervalTime')
 ;
-    
+
+socket = io();
+socket.on('link', onServerFileReady);  
+function onServerFileReady(data){
+    //if(self.uid!== data.uid)	return;
+    data.path = data.path.replace('\\', '/');
+    var url = location.protocol + '//' + location.host + '/'+data.path;
+    data.url = url;
+    tmp =url.split('/');
+    data.name = tmp[tmp.length-1];
+    addFileLink(data);			
+}
+
 document.addEventListener("DOMContentLoaded", function() {
   socket = io();
   start = document.getElementById('start');
@@ -29,10 +43,10 @@ document.addEventListener("DOMContentLoaded", function() {
   function startRecording() {
     var t = document.getElementById('type');
 	var type = t.options[t.selectedIndex].value;
-    recorder = new Recorder(window.stream, {
+    recorder = new OpusRecorder(window.stream, {
         type: type,
-        autoUpload: document.getElementById('autoUpload').checked,
-        intervalTime: Math.round(document.getElementById('intervalTime').value * 1000)
+        autoUpload: autoUpload.checked,
+        intervalTime: Math.round(intervalTime.value * 1000)
         }, socket);
     recorder.start();
     start.setAttribute('disabled',true);
@@ -40,25 +54,24 @@ document.addEventListener("DOMContentLoaded", function() {
   }
 
   function stopRecording() {
-    recorder.stop(onFileReady);
+    recorder.stop(addFileLink);
     start.removeAttribute('disabled');
     stop.setAttribute('disabled',true);    
   }
 
-
-
-  function onFileReady(data) {
+  function addFileLink(data) {
+    
 	  var url = data.url
 	    , li = document.createElement('li')
 	    , au = document.createElement('audio')
 	    , hf = document.createElement('a')
-		, tmp =url.split('/')
 	;
-	  
+      if(document.querySelector('li.'+data.uid))  return;
+	  li.className += " ."+data.uid;
 	  au.controls = true;
 	  au.src = url;
 	  hf.href = url;
-	  hf.download = tmp[tmp.length-1];
+	  hf.download = data.name || 'download';
 	  hf.innerHTML = hf.download;
 	  li.appendChild(au);
 	  li.appendChild(hf);

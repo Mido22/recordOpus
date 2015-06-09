@@ -1,8 +1,9 @@
 #  Opus Audio Recorder
 
 
+If support for MediaRecorder API is detected( in case of Firefox), my recorder is just a wrapper for it, for other case, I am using [Rillke](https://github.com/Rillke)'s [opus library](https://github.com/Rillke/opusenc.js) for compressing wav audio into ogg file on client side.
 
-I am using [kazuki](https://github.com/kazuki)'s [opus library](https://github.com/kazuki/opus.js-sample) for compressing wav audio into opus packets on client side,  sending it to my server using `socket.io`, where I decode it and convert it back to `wav` file.
+You can just host the files in `client` folder in any server, if you just want to record audio from microphone in one shot and save as `ogg` file, but if you do not want to run out of browser memory( while recording long podcasts and such,) you can keep sending the data as chunks to the server, at desired time intervals and server would join all of them into single file( `ffmpeg` needed for browsers other than firefox) and provide you the final link.
 
 
 ### Things needed:
@@ -18,13 +19,10 @@ to start the application, just type `npm start` in the project root folder.
 
  
 ### Sources:
-  * [Opus](https://github.com/kazuki/opus.js-sample)
+  * [Opus](https://github.com/Rillke/opusenc.js)
+  * [Opus( older one)](https://github.com/kazuki/opus.js-sample)
   * [Wav Recorder](https://github.com/mattdiamond/Recorderjs)
- 
-### Features 
-  
-  * Can either upload recording in one shot, or upload in chunks at desired time intervals.
-  * able to save in various formats( wav, mp3 and ogg) (Note: ffmpeg must be installed in system for this.)
+
  
 License
 -------

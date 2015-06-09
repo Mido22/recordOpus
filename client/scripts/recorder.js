@@ -1,37 +1,43 @@
 (function(window){
-
+  
     window.AudioContext = window.AudioContext || window.webkitAudioContext;
+    window.URL = window.URL || window.webkitURL;
     window.audioContext = new AudioContext();
-    var WORKER_PATH = '/scripts/recorderWorker.js';
+    window.OpusRecorder = OpusRecorder;
+    var WORKER_PATH = 'workers/recorderWorker.js',
+        OPUS_WORKER_PATH = 'workers/EmsWorkerProxy.js',
+        commonCallback;     
 
-    function Recorder(stream, cfg, socket){
+    function OggShimRecorder(stream, cfg){
     
-        this.uid = genRandom();
+        console.log('using OggShimRecorder for recording...' );
         var config = cfg || {}
 			, self = this
             , bufferLen = 16384
             , intervalTime = config.intervalTime || 60000
             , autoUpload = !!config.autoUpload
-            , type = config.type || 'wav'
-            , callback = config.callback
             , recording = false
             , worker = new Worker(config.workerPath || WORKER_PATH)
+            , oggWorker = new Worker(config.opusWorkerPath || OPUS_WORKER_PATH)
             , source = window.audioContext.createMediaStreamSource(stream)
-            , sampleRate = source.context.sampleRate
-            , vInterval
             , ctx = source.context
+            , sampleRate = ctx.sampleRate
             , node = ctx.createScriptProcessor(bufferLen, 2, 2)
+            , callback = config.callback
+            , type = config.type  || 'ogg'
+            , vInterval
+            , recorderType = 'OggShim'
         ;
+        source.connect(node);        
+        node.connect(ctx.destination);
         
         node.onaudioprocess = function(e){
             if (!recording) return;
             worker.postMessage({
                 command: 'record',
-                buffer: e.inputBuffer.getChannelData(0)
+                buffer: [e.inputBuffer.getChannelData(0), e.inputBuffer.getChannelData(1)]
             });
         }
-        source.connect(node);        
-        node.connect(ctx.destination);
 		
         worker.postMessage({
             command: 'init',
@@ -41,52 +47,152 @@
         });
         
         worker.onmessage = function(e){	
-            if(e.data.type === 'packets'){
-                socket.emit('decode', {
-                    packets: e.data.packets,
-                    uid: self.uid,
-                    stop: e.data.stop,
-					type: type,
-					sampleRate: e.data.sampleRate,
-                    autoUpload: autoUpload
+            var data = e.data;
+            delete data.command;
+            if(type === 'wav'){
+                callback(data);
+            }else{
+                blobToArrayBuffer(data.blob, function(buffer){
+                oggWorker.postMessage({
+                  command: 'encode',
+                  args: ['in', 'out'],
+                  outData: {out: {MIME: 'audio/ogg'}},
+                  fileData: {in: new Uint8Array(buffer)}
+                });  
+                oggWorker.onmessage = function(e) {
+                  if(e.data && e.data.reply){
+                    if(e.data.reply === 'done'){      
+                      data.blob = e.data.values.out.blob;
+                      callback(data);
+                    }
+                  }
+                };                    
                 });
-                if(e.data.stop){
-                    worker.terminate(); 
-                }
             }
         }
 
 
         this.start = function(){
             recording = true;      
-            if(autoUpload)	vInterval = setInterval(getPackets, intervalTime);
+            if(autoUpload)	vInterval = setInterval(getBlob, intervalTime);
         };
 
         this.stop = function(cb){
             callback = cb || callback;
             if(vInterval)	clearInterval(vInterval);
-            getPackets(true);
+            getBlob(true);
             recording = false;
         };
-
-		 function onFileReady(data){
-			if(self.uid!== data.uid)	return;
-            data.path = data.path.replace('\\', '/');
-			var url = location.protocol + '//' + location.host + '/'+data.path;
-			data.url = url;
-			callback(data);			
-		}
-		
-        function getPackets(last){
-            worker.postMessage({command: 'getPackets', last:last, autoUpload:autoUpload});
-        }
-	
-		socket.on('link', onFileReady);	
+        
+        function getBlob(last){
+            worker.postMessage({
+                command: 'export',
+                autoUpload: autoUpload,
+                stop: last,
+                type: type,
+                recorderType: recorderType
+            });
+        }	
     };
 
+    function FoxRecorder(stream, cfg){
+        
+        console.log('using native MediaRecorder for recording...' );
+        var mediaRecorder = new MediaRecorder(stream);
+        var config = cfg || {}
+			, self = this
+            , intervalTime = config.intervalTime || 60000
+            , autoUpload = !!config.autoUpload
+            , callback = config.callback
+            , chunksRequested = 0, chunkId = 0                        // for identifying the last data chunk
+            , vInterval
+            , stopped
+            , callback = config.callback
+            , recorderType = 'Fox'
+        ;
+        
+        this.start = function(){
+            mediaRecorder.start();
+            if(autoUpload)	vInterval = setInterval(requestData, intervalTime);
+        };
+
+        this.stop = function(cb){
+            callback = cb || callback;
+            if(vInterval)	clearInterval(vInterval);
+            mediaRecorder.stop();
+            chunksRequested++;
+            stopped = true;     // can also be checked as mediarecorder.state === 'inactive'
+        };
+		
+        function requestData(){
+            mediaRecorder.requestData();
+            chunksRequested++;
+        }
+        
+        mediaRecorder.ondataavailable = function(e){
+            chunkId++;
+            callback({
+                autoUpload: autoUpload,
+                stop: (chunkId >= chunksRequested) && stopped,
+                type: 'ogg',
+                blob: e.data,
+                recorderType: recorderType
+            });  
+        }
+    };
+    
+    function OpusRecorder(stream, cfg){
+    
+        var config = cfg || {}
+			, self = this
+            , callback = config.callback
+            , recorder
+            , uid = genRandom()
+        ;
+        
+        config.intervalTime = config.intervalTime || 60000;
+        config.autoUpload = !!config.autoUpload;
+        config.type = (!config.autoUpload && config.type)? config.type : 'ogg';
+        config.callback = onBlobData;        
+        if(callback)    commonCallback = callback;        
+        
+        this.start = function(){
+            recorder  = (window.MediaRecorder)? new FoxRecorder(stream, config) : new OggShimRecorder(stream, config);
+            recorder.start();
+        };
+
+        this.stop = function(cb){
+            if(cb)  callback = commonCallback = cb;
+            recorder.stop();
+        };
+
+        function onBlobData(data){
+            data.uid= uid;
+            if(!autoUpload){
+                data.name = [data.uid, data.type || 'ogg'].join('.');
+                data.url = window.URL.createObjectURL(data.blob);
+                window.datum = data;
+                callback(data);
+            }else{
+                socket.emit('save', data);
+            }
+        }      
+		
+    };
+    
     function genRandom(){
         return ('Rec:'+(new Date()).toTimeString().slice(0, 8) + ':' + Math.round(Math.random()*1000)).replace(/:/g,'_');
     }
-
-    window.Recorder = Recorder;
+        
+    function blobToArrayBuffer(blob, cb){
+        var fileReader = new FileReader();
+        fileReader.onload = function() {
+            cb(this.result);
+        };
+        fileReader.readAsArrayBuffer(blob);
+    }
+  
 })(window);
+
+
+

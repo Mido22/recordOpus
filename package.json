@@ -1,7 +1,7 @@
 {
   "name": "recordOpus",
-  "version": "0.0.2",
-  "description": "audio recorder using opus packets",
+  "version": "1.0.0",
+  "description": "audio recorder using opus encoding",
   "scripts": {
     "start": "node server/app.js",
     "test": "echo \"One day I would write them, but not today.\" && exit 1"
@@ -12,6 +12,8 @@
   },
   "keywords": [
     "opus",
+    "ogg",
+    "getUserMedia",
     "audio-recorder",
     "nodejs",
     "javascript"
