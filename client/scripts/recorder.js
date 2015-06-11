@@ -95,7 +95,7 @@
         }	
     };
 
-    function FoxRecorder(stream, cfg){
+    function FoxRecorder(stream, cfg, socket){
         
         console.log('using native MediaRecorder for recording...' );
         var mediaRecorder = new MediaRecorder(stream);
@@ -171,7 +171,6 @@
             if(!autoUpload){
                 data.name = [data.uid, data.type || 'ogg'].join('.');
                 data.url = window.URL.createObjectURL(data.blob);
-                window.datum = data;
                 callback(data);
             }else{
                 socket.emit('save', data);

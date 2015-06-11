@@ -39,42 +39,41 @@ document.addEventListener("DOMContentLoaded", function() {
   stop.onclick = stopRecording;
 });
 
+function startRecording() {
+  var t = document.getElementById('type');
+  var type = t.options[t.selectedIndex].value;
+  recorder = new OpusRecorder(window.stream, {
+     type: type,
+     autoUpload: autoUpload.checked,
+     intervalTime: Math.round(intervalTime.value * 1000)
+  }, socket);
+  recorder.start();
+  start.setAttribute('disabled',true);
+  stop.removeAttribute('disabled');
+}
 
-  function startRecording() {
-    var t = document.getElementById('type');
-	var type = t.options[t.selectedIndex].value;
-    recorder = new OpusRecorder(window.stream, {
-        type: type,
-        autoUpload: autoUpload.checked,
-        intervalTime: Math.round(intervalTime.value * 1000)
-        }, socket);
-    recorder.start();
-    start.setAttribute('disabled',true);
-    stop.removeAttribute('disabled');
-  }
+function stopRecording() {
+  recorder.stop(addFileLink);
+  start.removeAttribute('disabled');
+  stop.setAttribute('disabled',true);    
+}
 
-  function stopRecording() {
-    recorder.stop(addFileLink);
-    start.removeAttribute('disabled');
-    stop.setAttribute('disabled',true);    
-  }
-
-  function addFileLink(data) {
+function addFileLink(data) {
     
-	  var url = data.url
-	    , li = document.createElement('li')
-	    , au = document.createElement('audio')
-	    , hf = document.createElement('a')
-	;
-      if(document.querySelector('li.'+data.uid))  return;
-	  li.className += " ."+data.uid;
-	  au.controls = true;
-	  au.src = url;
-	  hf.href = url;
-	  hf.download = data.name || 'download';
-	  hf.innerHTML = hf.download;
-	  li.appendChild(au);
-	  li.appendChild(hf);
-	  recordingslist.appendChild(li); 
-  }
+  var url = data.url
+    , li = document.createElement('li')
+    , au = document.createElement('audio')
+    , hf = document.createElement('a')
+  ;
+  if(document.querySelector('li.'+data.uid))  return;
+  li.className += " ."+data.uid;
+  au.controls = true;
+  au.src = url;
+  hf.href = url;
+  hf.download = data.name || 'download';
+  hf.innerHTML = hf.download;
+  li.appendChild(au);
+  li.appendChild(hf);
+  recordingslist.appendChild(li); 
+}
   
