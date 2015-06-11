@@ -95,7 +95,7 @@
         }	
     };
 
-    function FoxRecorder(stream, cfg, socket){
+    function FoxRecorder(stream, cfg){
         
         console.log('using native MediaRecorder for recording...' );
         var mediaRecorder = new MediaRecorder(stream);
@@ -141,7 +141,7 @@
         }
     };
     
-    function OpusRecorder(stream, cfg){
+    function OpusRecorder(stream, cfg, socket){
     
         var config = cfg || {}
 			, self = this
