@@ -152,7 +152,7 @@
         
         config.intervalTime = config.intervalTime || 60000;
         config.autoUpload = !!config.autoUpload;
-        config.type = (!config.autoUpload && config.type)? config.type : 'ogg';
+        config.type = 'ogg';
         config.callback = onBlobData;        
         if(callback)    commonCallback = callback;        
         

@@ -40,10 +40,7 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 
 function startRecording() {
-  var t = document.getElementById('type');
-  var type = t.options[t.selectedIndex].value;
   recorder = new OpusRecorder(window.stream, {
-     type: type,
      autoUpload: autoUpload.checked,
      intervalTime: Math.round(intervalTime.value * 1000)
   }, socket);

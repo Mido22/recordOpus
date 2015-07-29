@@ -18,20 +18,27 @@ http.listen(80, function(){
     open("http://localhost:80");
 });
 
+// for socket communication.
 var io = require('socket.io')(http);
 io.on('connection', function(socket){  
-  socket.on('save', saveAudio);  
+  socket.on('save', function(data){
+    saveAudio(data, function(response){
+      socket.emit('link', response);
+    });
+  });  
 });
 
-function saveAudio(data){
+//function listening to save request from client, callback is called once the response is ready
+function saveAudio(data, callback){
     if(data.recorderType === 'Fox' || !data.autoUpload){
-        saveFox(data);
+        saveFox(data, callback);
     }else{
-        saveOpusShim(data);
+        saveOpusShim(data, callback);
     }
 }
 
-function saveFox(data){
+// function in charge of saving file for Firefox native recorder[ we just append to file, not create new file for each chunck of audio recieved]
+function saveFox(data, callback){
     data.path = path.join(TMP_PATH, data.uid + '.ogg');
     fs.appendFile( data.path, data.blob, function(err){
         if(err){
@@ -39,11 +46,12 @@ function saveFox(data){
             return;
         }        
         if(data.autoUpload && !data.stop)   return;
-        returnLink(data, data.path);
+        returnLink(data, data.path, callback);
     }); 
 }
 
-function saveOpusShim(data){
+// function in charge of saving file for OggShimRecorder
+function saveOpusShim(data, callback){
     data.path = TMP_PATH+'/'+data.uid;
     mkDir(data.path, function(){        
         var fileName  = 'audio_' + Math.random() + '.ogg',
@@ -68,7 +76,7 @@ function saveOpusShim(data){
                                 console.log('error while removing dir',err);
                             }
                         });
-                        returnLink(data, filepath);
+                        returnLink(data, filepath, callback);
                     });
                 }
             }); 
@@ -76,12 +84,14 @@ function saveOpusShim(data){
     });
 }
 
-function returnLink(data, filepath){
+// common method for responding once the file is successfully saved in server.
+function returnLink(data, filepath, callback){
     data.path = filepath;
     delete data.blob;
-    io.emit('link', data);
+    callback(data);
 }
 
+// for concating 
 function concat(inFile, outFile, callback){	  
 	try{                
 		ffmpeg().input(inFile)
