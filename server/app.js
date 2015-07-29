@@ -91,7 +91,7 @@ function returnLink(data, filepath, callback){
     callback(data);
 }
 
-// for concating 
+// for concating all audio chunks into single file.
 function concat(inFile, outFile, callback){	  
 	try{                
 		ffmpeg().input(inFile)
@@ -109,6 +109,7 @@ function concat(inFile, outFile, callback){
 	}      
 }
 
+// for creating a directory at the given path if not present already.
 function mkDir(dirPath, cb){
     fs.exists(dirPath, function(exists){
         if(!exists){

@@ -10,7 +10,7 @@
 
     function OggShimRecorder(stream, cfg){
     
-        console.log('using OggShimRecorder for recording...' );
+
         var config = cfg || {}
 			, self = this
             , bufferLen = 16384
@@ -24,12 +24,16 @@
             , sampleRate = ctx.sampleRate
             , node = ctx.createScriptProcessor(bufferLen, 2, 2)
             , callback = config.callback
-            , type = config.type  || 'ogg'
             , vInterval
             , recorderType = 'OggShim'
         ;
         source.connect(node);        
         node.connect(ctx.destination);
+
+        //using the below variables to keep track of chucks sent to worker for conversion, we are gonna convert chunks sequencially as when done in parallel, sometimes the (last) smaller chuck finishes first sometimes and previous few chucks are missed.
+        var encodingInProgess = false,
+            waitQueue = [];  // for holding wav to ogg conversion worker call data( used for ensuring sequencing)
+
         
         node.onaudioprocess = function(e){
             if (!recording) return;
@@ -37,7 +41,7 @@
                 command: 'record',
                 buffer: [e.inputBuffer.getChannelData(0), e.inputBuffer.getChannelData(1)]
             });
-        }
+        };
 		
         worker.postMessage({
             command: 'init',
@@ -49,10 +53,7 @@
         worker.onmessage = function(e){	
             var data = e.data;
             delete data.command;
-            if(type === 'wav'){
-                callback(data);
-            }else{
-                blobToArrayBuffer(data.blob, function(buffer){
+            blobToArrayBuffer(data.blob, function(buffer){
                 oggWorker.postMessage({
                   command: 'encode',
                   args: ['in', 'out'],
@@ -60,17 +61,22 @@
                   fileData: {in: new Uint8Array(buffer)}
                 });  
                 oggWorker.onmessage = function(e) {
+                  var next;
                   if(e.data && e.data.reply){
                     if(e.data.reply === 'done'){      
                       data.blob = e.data.values.out.blob;
                       callback(data);
+                      if(waitQueue.length){
+                        next = waitQueue.shift();
+                        worker.postMessage(next);
+                      }else{
+                        encodingInProgess = false;
+                      }
                     }
                   }
                 };                    
-                });
-            }
-        }
-
+            });
+        };
 
         this.start = function(){
             recording = true;      
@@ -85,14 +91,21 @@
         };
         
         function getBlob(last){
-            worker.postMessage({
+
+            var msg = {
                 command: 'export',
                 autoUpload: autoUpload,
                 stop: last,
-                type: type,
                 recorderType: recorderType
-            });
+            };
+            if(encodingInProgess){
+                waitQueue.push(msg);
+            }else{
+                encodingInProgess = true;
+                worker.postMessage(msg);
+            }
         }	
+
     };
 
     function FoxRecorder(stream, cfg){
