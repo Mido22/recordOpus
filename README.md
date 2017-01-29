@@ -1,6 +1,7 @@
-## Note
+### Note
 
-for those looking for pure client based solution, not streaming packets to server, take a look at [this demo](https://github.com/Mido22/MediaRecorder-sample), it works in chrome v47+ and firefox v25+, the code is quite simple, my advice to you is use HTML5's MediaRecorder directly and no use some third-party wrapper library unless it is absolutely needed.
+For those looking for pure client based solution, not streaming packets to server, take a look at [this demo](https://github.com/Mido22/MediaRecorder-sample), it works in chrome v47+ and firefox v25+, the code is quite simple, my advice to you is use HTML5's MediaRecorder directly and no use some third-party wrapper library unless it is absolutely needed.
+
 ---
 
 #  Opus Audio Recorder
